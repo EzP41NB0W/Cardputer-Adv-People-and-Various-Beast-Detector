@@ -45,12 +45,8 @@ Current pin assignment (`main.cpp`):
 
 | Signal        | GPIO |
 |---------------|------|
-| Radar UART RX | G15  |
-| Radar UART TX | G13  |
-
-(This was swapped from the official EXT-header pinmap to match a
-specific physical connector build - check `main.cpp` if you're wiring
-this fresh, the `#define`s there are the actual source of truth.)
+| Radar UART RX | G13  |
+| Radar UART TX | G15  |
 
 ## Building
 
