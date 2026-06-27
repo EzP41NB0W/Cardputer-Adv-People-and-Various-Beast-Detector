@@ -1,0 +1,11 @@
+# PlatformIO build artifacts
+.pio/
+.vscode/
+
+# Real WiFi credentials — never commit these.
+# Copy src/wifi_secrets.h.example to src/wifi_secrets.h and fill in locally.
+src/wifi_secrets.h
+
+# OS cruft
+.DS_Store
+Thumbs.db
