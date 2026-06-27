@@ -41,8 +41,6 @@
 //  CHANGED in v3.5 — real-world field tuning with a second test subject:
 //  - Defaults updated: Hold 1500→5000ms, Smooth 0.5→1.0 (both confirmed
 //    good on real hardware, not guesses anymore — see handoff.md)
-//  - RX/TX pins swapped (15/13 instead of 13/15) to match a new permanent
-//    physical connector build
 //  - Heading sign flipped in updateHeading() — targets were appearing
 //    behind the wearer instead of in front; gyro Z sign convention was
 //    opposite what the (angle - heading) rotation math assumed
@@ -60,8 +58,8 @@
 // build that routes the radar's TX/RX the other way around — these two
 // #defines are now the actual source of truth for which GPIO carries
 // which signal, not the EXT header's official labeling.
-#define RADAR_RX_PIN  15
-#define RADAR_TX_PIN  13
+#define RADAR_RX_PIN  13
+#define RADAR_TX_PIN  15
 
 // ─── Display ─────────────────────────────────────────────────────────
 #define SCR_W  240
