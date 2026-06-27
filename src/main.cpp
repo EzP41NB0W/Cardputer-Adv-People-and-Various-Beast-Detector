@@ -53,10 +53,16 @@
 #include "wifi_secrets.h"
 
 // ─── Pins ──────────────────────────────────────────────────────────
-// G13=RX / G15=TX, matching the official Cardputer-ADV EXT 14P pinmap.
-// A v3.5 change briefly swapped these to 15/13 based on an assumed new
-// physical connector build — that assumption was wrong, reverted
-// 2026-06-27 back to the original official pinmap.
+// G13=RX / G15=TX — the official Cardputer-ADV EXT 14P pinmap. This is
+// the right default for a standard wiring job straight to the EXT
+// header.
+//
+// NOTE: pin assignment here is wiring-dependent, not a fixed firmware
+// fact — some physical connector/cable builds swap RX/TX relative to
+// the EXT header (this happened on the original build this project was
+// developed on). If your radar shows no data (check the debug view —
+// 'd' key) despite otherwise-correct wiring and power, try swapping
+// these two values.
 #define RADAR_RX_PIN  13
 #define RADAR_TX_PIN  15
 
@@ -80,16 +86,29 @@ void handleRoot() {
         "<meta name='viewport' content='width=device-width,initial-scale=1'>"
         "<style>body{background:#111;text-align:center;font-family:monospace;color:#0f0;margin:0;padding:20px}"
         "img{width:90vw;max-width:720px;image-rendering:pixelated;border:2px solid #0f0}</style>"
-        "<script>setInterval(function(){"
-        "document.getElementById('s').src='/screen.bmp?'+Date.now();"
-        "},250);</script>"
+        "<script>"
+        "var img;"
+        "function nextFrame(){ img.src='/screen.bmp?'+Date.now(); }"
+        "window.onload=function(){"
+        "  img=document.getElementById('s');"
+        "  img.onload=nextFrame;"
+        "  img.onerror=function(){ setTimeout(nextFrame,250); };"
+        "  nextFrame();"
+        "};"
+        "</script>"
         "</head><body><h3>RD-03D Radar — live mirror</h3>"
-        "<img id='s' src='/screen.bmp'></body></html>";
+        "<img id='s'></body></html>";
     server.send(200, "text/html", html);
 }
 
-// Streams the current canvas buffer as a 24-bit BMP, row by row, so we
-// never need a second ~97KB buffer — just one 720-byte row at a time.
+// Streams the current canvas buffer as a 24-bit BMP. Batches several rows
+// per client.write() call instead of one 720-byte write per row (was 135
+// separate writes/frame, each its own TCP send — combined with Nagle's
+// algorithm + delayed ACKs, the real cause of the mirror being unusably
+// slow, not WiFi bandwidth itself). ROWS_PER_CHUNK chosen to cut write()
+// calls by >10x while keeping the extra buffer small — this board likely
+// has no PSRAM, so a full second ~97KB frame buffer was deliberately
+// avoided. Confirmed fixed on real hardware 2026-06-27.
 void handleScreenBmp() {
     const int w = SCR_W, h = SCR_H;
     const int rowBytes = w * 3;                  // 240*3 = 720, already a multiple of 4 — no BMP row padding needed
@@ -111,24 +130,33 @@ void handleScreenBmp() {
     if (!buf) { server.send(500, "text/plain", "no buffer"); return; }
 
     WiFiClient client = server.client();
+    client.setNoDelay(true);   // disable Nagle — avoids the classic small-write stall this was hitting
     server.setContentLength(fileSize);
     server.send(200, "image/bmp", "");
     client.write(header, 54);
 
-    uint8_t rowOut[rowBytes];
+    const int ROWS_PER_CHUNK = 15;   // 15*720 = 10,800 bytes/chunk, 9 chunks for h=135 (135 % 15 == 0)
+    static uint8_t chunkBuf[ROWS_PER_CHUNK * SCR_W * 3];
+
     // BMP stores rows bottom-to-top
-    for (int y = h - 1; y >= 0; y--) {
-        uint16_t *row = buf + (y * w);
-        for (int x = 0; x < w; x++) {
-            uint16_t p = row[x];
-            uint8_t r = (uint8_t)(((p >> 11) & 0x1F) << 3);
-            uint8_t g = (uint8_t)(((p >> 5)  & 0x3F) << 2);
-            uint8_t b = (uint8_t)((p & 0x1F) << 3);
-            rowOut[x*3 + 0] = b;   // BMP pixel order is BGR
-            rowOut[x*3 + 1] = g;
-            rowOut[x*3 + 2] = r;
+    int y = h - 1;
+    while (y >= 0) {
+        int rowsThisChunk = min(ROWS_PER_CHUNK, y + 1);
+        for (int r = 0; r < rowsThisChunk; r++) {
+            uint16_t *row = buf + ((y - r) * w);
+            uint8_t *out = chunkBuf + (r * rowBytes);
+            for (int x = 0; x < w; x++) {
+                uint16_t p = row[x];
+                uint8_t rr = (uint8_t)(((p >> 11) & 0x1F) << 3);
+                uint8_t g  = (uint8_t)(((p >> 5)  & 0x3F) << 2);
+                uint8_t b  = (uint8_t)((p & 0x1F) << 3);
+                out[x*3 + 0] = b;   // BMP pixel order is BGR
+                out[x*3 + 1] = g;
+                out[x*3 + 2] = rr;
+            }
         }
-        client.write(rowOut, rowBytes);
+        client.write(chunkBuf, rowsThisChunk * rowBytes);
+        y -= rowsThisChunk;
     }
 }
 

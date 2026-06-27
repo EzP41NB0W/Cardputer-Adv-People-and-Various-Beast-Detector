@@ -48,6 +48,14 @@ Current pin assignment (`main.cpp`):
 | Radar UART RX | G13  |
 | Radar UART TX | G15  |
 
+These match the official Cardputer-ADV EXT 14P pinmap and are the right
+default for a standard wiring job. **That said, this assignment is
+wiring-dependent, not a fixed fact** -- some physical connector/cable
+builds swap RX/TX relative to the EXT header. If you wire this up
+correctly otherwise (power, silkscreen TX/RX per the note above) and
+the radar still shows no data in the debug view ('d' key on-device),
+try swapping `RADAR_RX_PIN`/`RADAR_TX_PIN` in `main.cpp`.
+
 ## Building
 
 This is a PlatformIO project targeting `esp32-s3-devkitc-1`.
