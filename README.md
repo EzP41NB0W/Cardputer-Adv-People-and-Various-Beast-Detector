@@ -33,7 +33,7 @@ an optional WiFi screen mirror so you can watch from another room.
 
 ## Wiring - important gotchas
 
-- **The RD-03D module's silkscreen TX/RX labels are swapped.** Wire
+- **The RD-03D module's silkscreen TX/RX labels are swapped on my particular board so if it doesn't work start there.** Wire
   label-to-label (module "TX" -> board UART RX, module "RX" -> board UART
   TX) - not crossed the way you'd normally expect.
 - **Don't touch the internal I2C bus with raw `Wire` calls.** This
