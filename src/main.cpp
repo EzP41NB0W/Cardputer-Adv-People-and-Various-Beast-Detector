@@ -53,11 +53,10 @@
 #include "wifi_secrets.h"
 
 // ─── Pins ──────────────────────────────────────────────────────────
-// Originally G13=RX / G15=TX per the official Cardputer-ADV EXT 14P
-// pinmap. SWAPPED 2026-06-21 to match a new permanent physical connector
-// build that routes the radar's TX/RX the other way around — these two
-// #defines are now the actual source of truth for which GPIO carries
-// which signal, not the EXT header's official labeling.
+// G13=RX / G15=TX, matching the official Cardputer-ADV EXT 14P pinmap.
+// A v3.5 change briefly swapped these to 15/13 based on an assumed new
+// physical connector build — that assumption was wrong, reverted
+// 2026-06-27 back to the original official pinmap.
 #define RADAR_RX_PIN  13
 #define RADAR_TX_PIN  15
 
